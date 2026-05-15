@@ -32,11 +32,21 @@ export function StockOverviewScreen() {
   const loadStock = async () => {
     try {
       const data = await mockApi.stock.getAll();
-      const userStock = data.filter(
-        (s) => s.userId === user?.id && s.buId === selectedBU?.id && s.awsId === selectedAWS?.id
-      );
+      console.log('[StockOverview] getAllStock returned:', data.length, 'records');
+      console.log('[StockOverview] Filter criteria - userId:', user?.id, 'buId:', selectedBU?.id, 'awsId:', selectedAWS?.id);
+      const userStock = data.filter((s) => {
+        const userMatch = s.userId === user?.id;
+        const buMatch = s.buId === selectedBU?.id;
+        const awsMatch = s.awsId === selectedAWS?.id;
+        if (userMatch && buMatch && awsMatch) {
+          console.log('[StockOverview] ✓ Match found:', s.productName);
+        }
+        return userMatch && buMatch && awsMatch;
+      });
+      console.log('[StockOverview] Filtered result:', userStock.length, 'records');
       setStock(userStock);
     } catch (err) {
+      console.error('[StockOverview] loadStock error:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);

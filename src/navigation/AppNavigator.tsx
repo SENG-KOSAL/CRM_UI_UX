@@ -205,44 +205,28 @@ function MainTabs() {
 }
 
 export function AppNavigator() {
-  const { isAuthenticated, user, selectedBU, selectedAWS } = useAuth();
+  const { isAuthenticated, user, selectedBU, selectedAWS, isLoading } = useAuth();
 
-  if (!isAuthenticated) {
-    return (
-      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-        <AuthStack.Screen name="Login" component={LoginScreen} />
-        <AuthStack.Screen name="BUSelection" component={BUSelectionScreen} />
-        <AuthStack.Screen name="AWSSelection" component={AWSSelectionScreen} />
-        <AuthStack.Screen name="OpenStock" component={OpenStockScreen} />
-        <AuthStack.Screen name="StartSession" component={StartSessionScreen} />
-        <AuthStack.Screen name="Main" component={MainTabs} />
-      </AuthStack.Navigator>
-    );
-  }
+  if (isLoading) return null;
 
-  if (user && !selectedBU) {
-    return (
-      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-        <AuthStack.Screen name="BUSelection" component={BUSelectionScreen} />
-      </AuthStack.Navigator>
-    );
-  }
-
-  if (user && selectedBU && !selectedAWS) {
-    return (
-      <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-        <AuthStack.Screen name="AWSSelection" component={AWSSelectionScreen} />
-      </AuthStack.Navigator>
-    );
-  }
-
-  if (user && selectedBU && selectedAWS) {
-    return <MainTabs />;
+  let initialRoute: keyof AuthStackParamList = 'Login';
+  if (isAuthenticated && user) {
+    if (!selectedBU) initialRoute = 'BUSelection';
+    else if (!selectedAWS) initialRoute = 'AWSSelection';
+    else initialRoute = 'Main';
   }
 
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Navigator
+      screenOptions={{ headerShown: false }}
+      initialRouteName={initialRoute}
+    >
       <AuthStack.Screen name="Login" component={LoginScreen} />
+      <AuthStack.Screen name="BUSelection" component={BUSelectionScreen} />
+      <AuthStack.Screen name="AWSSelection" component={AWSSelectionScreen} />
+      <AuthStack.Screen name="OpenStock" component={OpenStockScreen} />
+      <AuthStack.Screen name="StartSession" component={StartSessionScreen} />
+      <AuthStack.Screen name="Main" component={MainTabs} />
     </AuthStack.Navigator>
   );
 }

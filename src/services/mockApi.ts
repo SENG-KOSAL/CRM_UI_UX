@@ -4,6 +4,9 @@ import type {
   RouteSchema, SaleSchema, StockSchema, ProgramSchema, SaleItemSchema, ProductSchema,
 } from '../database/schema';
 import { MOCK_DELAY } from '../constants';
+import { wdb, STOCK_TABLE } from '../database/watermelon';
+import { Q } from '@nozbe/watermelondb';
+import Stock from '../database/models/Stock';
 
 const delay = (ms: number = MOCK_DELAY) => new Promise((r) => setTimeout(r, ms));
 
@@ -12,6 +15,24 @@ function parseItems(sale: SaleSchema): SaleSchema {
     try { sale.items = JSON.parse(sale.items); } catch {}
   }
   return sale;
+}
+
+function stockRecordToSchema(record: Stock): StockSchema {
+  return {
+    id: record.id,
+    productId: record.productId,
+    productName: record.productName,
+    productCode: record.productCode,
+    openingStock: record.openingStock,
+    currentStock: record.currentStock,
+    unit: record.unit,
+    price: record.price,
+    userId: record.userId,
+    buId: record.buId,
+    awsId: record.awsId,
+    date: record.date,
+    updatedAt: new Date(record.updatedAt).toISOString(),
+  };
 }
 
 export const mockApi = {
@@ -73,69 +94,81 @@ export const mockApi = {
 
   stock: {
     getByUser: async (userId: string, buId: string, awsId: string): Promise<StockSchema[]> => {
-      await delay();
-      return db.query(
-        TABLES.STOCK,
-        (s) => s.userId === userId && s.buId === buId && s.awsId === awsId
-      );
+      const records = await wdb.get<Stock>(STOCK_TABLE).query(
+        Q.and(
+          Q.where('user_id', userId),
+          Q.where('bu_id', buId),
+          Q.where('aws_id', awsId),
+        )
+      ).fetch();
+      return records.map(stockRecordToSchema);
     },
     getAll: async (): Promise<StockSchema[]> => {
-      await delay();
-      return db.getAll(TABLES.STOCK);
+      const records = await wdb.get<Stock>(STOCK_TABLE).query().fetch();
+      return records.map(stockRecordToSchema);
     },
     reduceStock: async (productId: string, quantity: number, userId: string, buId: string, awsId: string): Promise<void> => {
-      await delay(300);
-      const items = await db.query(
-        TABLES.STOCK,
-        (s) => s.productId === productId && s.userId === userId && s.buId === buId && s.awsId === awsId
-      );
-      if (items.length > 0) {
-        const item = items[0];
-        await db.update(TABLES.STOCK, item.id, {
-          currentStock: item.currentStock - quantity,
-        });
-      }
+      await wdb.write(async () => {
+        const items = await wdb.get<Stock>(STOCK_TABLE).query(
+          Q.and(
+            Q.where('product_id', productId),
+            Q.where('user_id', userId),
+            Q.where('bu_id', buId),
+            Q.where('aws_id', awsId),
+          )
+        ).fetch();
+         if (items.length > 0) {
+           await items[0].update((record) => {
+             record.currentStock -= quantity;
+             record.updated_at = Date.now();
+           });
+         }
+      });
     },
     getProductCatalog: async (): Promise<ProductSchema[]> => {
-      await delay();
       return db.getAll(TABLES.CATALOG);
     },
     saveOpeningStock: async (
       userId: string, buId: string, awsId: string,
       entries: { productId: string; productName: string; productCode: string; unit: string; price: number; quantity: number }[]
     ): Promise<void> => {
-      await delay(300);
       const today = new Date().toISOString().split('T')[0];
-      for (const entry of entries) {
-        if (entry.quantity <= 0) continue;
-        const existing = await db.query(
-          TABLES.STOCK,
-          (s: any) => s.productId === entry.productId && s.userId === userId && s.buId === buId && s.awsId === awsId
-        );
-        if (existing.length > 0) {
-          const record = existing[0];
-          await db.update(TABLES.STOCK, record.id, {
-            openingStock: record.openingStock + entry.quantity,
-            currentStock: record.currentStock + entry.quantity,
-            updatedAt: new Date().toISOString(),
-          });
-        } else {
-          await db.insert(TABLES.STOCK, {
-            productId: entry.productId,
-            productName: entry.productName,
-            productCode: entry.productCode,
-            openingStock: entry.quantity,
-            currentStock: entry.quantity,
-            unit: entry.unit,
-            price: entry.price,
-            userId,
-            buId,
-            awsId,
-            date: today,
-            updatedAt: new Date().toISOString(),
-          });
+      await wdb.write(async () => {
+        for (const entry of entries) {
+          if (entry.quantity <= 0) continue;
+          const existing = await wdb.get<Stock>(STOCK_TABLE).query(
+            Q.and(
+              Q.where('product_id', entry.productId),
+              Q.where('user_id', userId),
+              Q.where('bu_id', buId),
+              Q.where('aws_id', awsId),
+            )
+          ).fetch();
+           if (existing.length > 0) {
+             const record = existing[0];
+             await record.update((r) => {
+               r.openingStock += entry.quantity;
+               r.currentStock += entry.quantity;
+               r.updated_at = Date.now();
+             });
+           } else {
+             await wdb.get<Stock>(STOCK_TABLE).create((r) => {
+               r.productId = entry.productId;
+               r.productName = entry.productName;
+               r.productCode = entry.productCode;
+               r.openingStock = entry.quantity;
+               r.currentStock = entry.quantity;
+               r.unit = entry.unit;
+               r.price = entry.price;
+               r.userId = userId;
+               r.buId = buId;
+               r.awsId = awsId;
+               r.date = today;
+               r.updated_at = Date.now();
+             });
+           }
         }
-      }
+      });
     },
   },
 
@@ -192,7 +225,10 @@ export const mockApi = {
       const allSales = await db.getAll(TABLES.SALES);
       const sales = allSales.filter((s: SaleSchema) => s.userId === userId && s.buId === buId);
       const routes = await db.query(TABLES.ROUTES, (r) => r.userId === userId && r.buId === buId);
-      const stock = await db.query(TABLES.STOCK, (s) => s.userId === userId && s.buId === buId);
+      const stockRecords = await wdb.get<Stock>(STOCK_TABLE).query(
+        Q.and(Q.where('user_id', userId), Q.where('bu_id', buId))
+      ).fetch();
+      const stock = stockRecords.map(stockRecordToSchema);
       const outlets = await db.query(TABLES.OUTLETS, (o) => o.buId === buId);
 
       const totalSales = sales.reduce((sum: number, s: SaleSchema) => sum + s.total, 0);

@@ -63,6 +63,7 @@ export function OpenStockScreen({ navigation, route }: Props) {
 
   const handleSave = async () => {
     setSaving(true);
+    console.log('[OpenStockScreen] handleSave called, quantities:', quantities);
     try {
       const entries = catalog
         .map((p) => ({
@@ -74,11 +75,16 @@ export function OpenStockScreen({ navigation, route }: Props) {
           quantity: parseInt(quantities[p.id] || '0', 10),
         }))
         .filter((e) => e.quantity > 0);
+      console.log('[OpenStockScreen] Entries to save:', entries);
       if (entries.length > 0) {
+        console.log('[OpenStockScreen] About to call saveOpeningStock');
         await mockApi.stock.saveOpeningStock(user.id, bu.id, aws.id, entries);
+        console.log('[OpenStockScreen] saveOpeningStock completed successfully');
       }
       navigation.navigate('StartSession', { user, businessUnit: bu, aws });
-    } catch {}
+    } catch (err) {
+      console.error('[OpenStock] handleSave error:', err);
+    }
     setSaving(false);
   };
 

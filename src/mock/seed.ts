@@ -185,4 +185,6 @@ export async function seedDatabase(): Promise<void> {
   await db.insertMany(TABLES.STOCK, stockItems);
   await db.insertMany(TABLES.SALES, sales);
   await db.insertMany(TABLES.SETTLEMENTS, settlements);
+
+  // WatermelonDB stock intentionally empty — user adds via OpenStockScreen
 }

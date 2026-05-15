@@ -55,11 +55,27 @@ export function useAuth() {
   }, []);
 
   const selectBU = useCallback((bu: BusinessUnitSchema) => {
+    // Update React state
     setState((prev) => ({ ...prev, selectedBU: bu }));
+    // Persist to database session
+    try {
+      db.update(TABLES.USERS, 'session', { selectedBU: bu });
+      console.log('[useAuth] selectBU: Persisted to database -', bu.id, bu.name);
+    } catch (err) {
+      console.error('[useAuth] selectBU: Failed to persist -', err);
+    }
   }, []);
 
   const selectAWS = useCallback((aws: AWSSchema) => {
+    // Update React state
     setState((prev) => ({ ...prev, selectedAWS: aws }));
+    // Persist to database session
+    try {
+      db.update(TABLES.USERS, 'session', { selectedAWS: aws });
+      console.log('[useAuth] selectAWS: Persisted to database -', aws.id, aws.name);
+    } catch (err) {
+      console.error('[useAuth] selectAWS: Failed to persist -', err);
+    }
   }, []);
 
   const logout = useCallback(async () => {
