@@ -11,6 +11,7 @@ export type AuthStackParamList = {
   AWSSelection: { user: UserSchema; businessUnit: BusinessUnitSchema };
   OpenStock: { user: UserSchema; businessUnit: BusinessUnitSchema; aws: AWSSchema };
   StartSession: { user: UserSchema; businessUnit: BusinessUnitSchema; aws: AWSSchema };
+  Main: undefined;
 };
 
 export type MainTabParamList = {

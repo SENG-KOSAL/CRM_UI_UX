@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -23,7 +23,7 @@ export function StartSessionScreen({ navigation, route }: Props) {
   const handleStart = () => {
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Main' as any }],
+      routes: [{ name: 'Main' }],
     });
   };
 

@@ -215,6 +215,7 @@ export function AppNavigator() {
         <AuthStack.Screen name="AWSSelection" component={AWSSelectionScreen} />
         <AuthStack.Screen name="OpenStock" component={OpenStockScreen} />
         <AuthStack.Screen name="StartSession" component={StartSessionScreen} />
+        <AuthStack.Screen name="Main" component={MainTabs} />
       </AuthStack.Navigator>
     );
   }
