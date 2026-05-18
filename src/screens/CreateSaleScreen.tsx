@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput,
+  TextInput, RefreshControl,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -37,6 +37,7 @@ export function CreateSaleScreen() {
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (user && selectedBU && selectedAWS) loadStock();
@@ -47,6 +48,16 @@ export function CreateSaleScreen() {
       const data = await mockApi.stock.getByUser(user!.id, selectedBU!.id, selectedAWS!.id);
       setStock(data);
     } catch (err) {}
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadStock();
+    } catch (err) {
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const addToCart = (item: StockSchema) => {
@@ -158,7 +169,17 @@ export function CreateSaleScreen() {
         <Text style={styles.headerSub}>{outlet.name}</Text>
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      >
         {/* Products */}
         <Text style={styles.sectionTitle}>Products</Text>
         <View style={styles.productsGrid}>
@@ -236,6 +257,14 @@ export function CreateSaleScreen() {
                     </Text>
                   </View>
                 ))}
+              </View>
+            )}
+
+            {/* No Programs Indicator */}
+            {programs.length === 0 && (
+              <View style={styles.noProgramsSection}>
+                <Text style={styles.noProgramsIcon}>ℹ️</Text>
+                <Text style={styles.noProgramsText}>No programs applied to this sale</Text>
               </View>
             )}
 
@@ -467,6 +496,26 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.error,
     fontWeight: '600',
+  },
+  noProgramsSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(100, 150, 200, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 150, 200, 0.3)',
+  },
+  noProgramsIcon: {
+    fontSize: 20,
+  },
+  noProgramsText: {
+    ...typography.small,
+    color: colors.textSecondary,
+    flex: 1,
   },
   paymentRow: {
     flexDirection: 'row',

@@ -78,7 +78,7 @@ export function LoadProgramsScreen() {
 
       <View style={styles.content}>
         {loading ? null : programs.length === 0 ? (
-          <EmptyState title="No Programs" subtitle="No active programs for this outlet" icon="🎯" />
+           <EmptyState title="No Programs" subtitle="No active programs available. You can still create a sale!" icon="🎯" />
         ) : (
           <FlatList
             data={programs}
@@ -140,7 +140,7 @@ export function LoadProgramsScreen() {
         <AnimatedButton
           title={`Create Sale →`}
           onPress={handleContinue}
-          disabled={selectedPrograms.length === 0}
+          disabled={programs.length > 0 && selectedPrograms.length === 0}
           fullWidth
         />
       </View>
