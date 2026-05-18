@@ -238,6 +238,44 @@ export const mockApi = {
       const totalOutlets = outlets.length;
       const visitedOutlets = new Set(sales.map((s: SaleSchema) => s.outletId)).size;
       const totalStockValue = stock.reduce((sum: number, s: StockSchema) => sum + s.currentStock * s.price, 0);
+      const stockQuantity = stock.reduce((sum: number, s: StockSchema) => sum + s.currentStock, 0);
+
+      // Compute distributed quantity from sales (sum of item quantities)
+      let distributedQuantity = 0;
+      const distributedSKUs = new Set<string>();
+      for (const sale of sales) {
+        const items = typeof (sale as any).items === 'string'
+          ? JSON.parse((sale as any).items)
+          : (sale as any).items || [];
+        for (const item of items) {
+          distributedQuantity += item.quantity || 0;
+          if (item.productId) distributedSKUs.add(item.productId);
+        }
+      }
+
+      // Issue quantity: stock reduction from opening
+      const issueQuantity = stock.reduce((sum: number, s: StockSchema) =>
+        sum + Math.max(0, s.openingStock - s.currentStock), 0);
+
+      // Month-to-date calculations
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      const monthStartStr = monthStart.toISOString().split('T')[0];
+      const mtdSales = sales.filter((s: SaleSchema) => s.createdAt >= monthStartStr);
+      const mtdCE = new Set(mtdSales.map((s: SaleSchema) => s.outletId)).size;
+      const mtdCC = mtdSales.length;
+      const ceRate = totalOutlets > 0 ? Math.round((visitedOutlets / totalOutlets) * 100) : 0;
+      const mtdCoverage = totalOutlets > 0 ? Math.round((mtdCE / totalOutlets) * 100) : 0;
+      const mtdExecution = mtdCE > 0 ? Math.round((mtdCC / mtdCE) * 100) : 0;
+      const dropSize = sales.length > 0 ? Math.round(totalSales / sales.length) : 0;
+      const focQuantity = Math.round(distributedQuantity * 0.15);
+      const discountAmount = sales.reduce((sum: number, s: SaleSchema) => sum + (s.discount || 0), 0);
+      const saleQuantity = sales.reduce((sum: number, s: SaleSchema) => {
+        const items = typeof (s as any).items === 'string'
+          ? JSON.parse((s as any).items)
+          : (s as any).items || [];
+        return sum + items.reduce((is: number, it: any) => is + (it.quantity || 0), 0);
+      }, 0);
 
       return {
         totalSales,
@@ -248,6 +286,19 @@ export const mockApi = {
         visitedOutlets,
         remainingOutlets: totalOutlets - visitedOutlets,
         totalStockValue,
+        stockQuantity,
+        distributedQuantity,
+        mtdCE,
+        mtdCC,
+        ceRate,
+        issueQuantity,
+        mtdCoverage,
+        mtdExecution,
+        dropSize,
+        focQuantity,
+        discountAmount,
+        distributedSKU: distributedSKUs.size,
+        saleQuantity,
         routeProgress: routes.filter((r) => r.status === 'completed').length / Math.max(routes.length, 1),
         activeRoutes: routes.filter((r) => r.status === 'in_progress').length,
         pendingRoutes: routes.filter((r) => r.status === 'pending').length,
