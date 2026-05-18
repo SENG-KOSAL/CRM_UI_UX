@@ -17,6 +17,7 @@ export interface BusinessUnitSchema {
   code: string;
   region: string;
   isActive: boolean;
+  image?: string;
 }
 
 export interface AWSSchema {

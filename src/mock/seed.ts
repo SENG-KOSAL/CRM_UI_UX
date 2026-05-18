@@ -16,10 +16,8 @@ const users: any[] = [
 ];
 
 const businessUnits: BusinessUnitSchema[] = [
-  { id: 'bu_001', name: 'Jakarta Pusat', code: 'JKT-PST', region: 'Jakarta', isActive: true },
-  { id: 'bu_002', name: 'Jakarta Selatan', code: 'JKT-SEL', region: 'Jakarta', isActive: true },
-  { id: 'bu_003', name: 'Bandung', code: 'BDG', region: 'West Java', isActive: true },
-  { id: 'bu_004', name: 'Surabaya', code: 'SBY', region: 'East Java', isActive: true },
+  { id: 'bu_001', name: 'Wine', code: '-PP', region: '---, Cambodia', image: 'glass-wine', isActive: true },
+  { id: 'bu_002', name: 'Beer', code: '-pp', region: '---, Cambodia', image: 'glass-mug-variant', isActive: true },
 ];
 
 const awsList: AWSSchema[] = [

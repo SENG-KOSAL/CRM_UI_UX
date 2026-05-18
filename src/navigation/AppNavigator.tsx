@@ -12,7 +12,7 @@ import { LoginScreen } from '../screens/LoginScreen';
 import { BUSelectionScreen } from '../screens/BUSelectionScreen';
 import { AWSSelectionScreen } from '../screens/AWSSelectionScreen';
 import { OpenStockScreen } from '../screens/OpenStockScreen';
-import { StartSessionScreen } from '../screens/StartSessionScreen';
+
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { RoutePlanScreen } from '../screens/RoutePlanScreen';
 import { OutletSelectionScreen } from '../screens/OutletSelectionScreen';
@@ -225,7 +225,6 @@ export function AppNavigator() {
       <AuthStack.Screen name="BUSelection" component={BUSelectionScreen} />
       <AuthStack.Screen name="AWSSelection" component={AWSSelectionScreen} />
       <AuthStack.Screen name="OpenStock" component={OpenStockScreen} />
-      <AuthStack.Screen name="StartSession" component={StartSessionScreen} />
       <AuthStack.Screen name="Main" component={MainTabs} />
     </AuthStack.Navigator>
   );

@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { GlassCard } from '../components/GlassCard';
@@ -52,8 +53,15 @@ export function AWSSelectionScreen({ navigation, route }: Props) {
         colors={[colors.primaryDark, colors.primary]}
         style={styles.header}
       >
-        <Text style={styles.headerTitle}>Select AWS Period</Text>
-        <Text style={styles.headerSub}>{bu?.name} • Choose working period</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <MaterialCommunityIcons name="arrow-left" size={22} color={colors.textInverse} />
+          </TouchableOpacity>
+          <View style={styles.headerTextCol}>
+            <Text style={styles.headerTitle}>Select AWS Period</Text>
+            <Text style={styles.headerSub}>{bu?.name} • Choose working period</Text>
+          </View>
+        </View>
       </LinearGradient>
 
       <View style={styles.content}>
@@ -104,6 +112,22 @@ const styles = StyleSheet.create({
     paddingTop: spacing.huge + 20,
     paddingBottom: spacing.xxl,
     paddingHorizontal: spacing.xxl,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  headerTextCol: {
+    flex: 1,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     ...typography.h2,

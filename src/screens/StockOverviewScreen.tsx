@@ -13,7 +13,7 @@ import { SkeletonCard } from '../components/SkeletonLoader';
 import { EmptyState } from '../components/EmptyState';
 import { mockApi } from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
-import type { StockSchema } from '../database/schema';
+import type { StockSchema, ProductSchema } from '../database/schema';
 
 export function StockOverviewScreen() {
   const navigation = useNavigation();
@@ -22,6 +22,8 @@ export function StockOverviewScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+  const [productIcons, setProductIcons] = useState<Record<string, string>>({});
+  const KHR_RATE = 4100;
 
   useFocusEffect(
     useCallback(() => {
@@ -31,19 +33,21 @@ export function StockOverviewScreen() {
 
   const loadStock = async () => {
     try {
-      const data = await mockApi.stock.getAll();
-      console.log('[StockOverview] getAllStock returned:', data.length, 'records');
-      console.log('[StockOverview] Filter criteria - userId:', user?.id, 'buId:', selectedBU?.id, 'awsId:', selectedAWS?.id);
+      const [data, catalog] = await Promise.all([
+        mockApi.stock.getAll(),
+        mockApi.stock.getProductCatalog(),
+      ]);
+      const iconMap: Record<string, string> = {};
+      for (const p of catalog) {
+        iconMap[p.id] = p.productIcon;
+      }
+      setProductIcons(iconMap);
       const userStock = data.filter((s) => {
         const userMatch = s.userId === user?.id;
         const buMatch = s.buId === selectedBU?.id;
         const awsMatch = s.awsId === selectedAWS?.id;
-        if (userMatch && buMatch && awsMatch) {
-          console.log('[StockOverview] ✓ Match found:', s.productName);
-        }
         return userMatch && buMatch && awsMatch;
       });
-      console.log('[StockOverview] Filtered result:', userStock.length, 'records');
       setStock(userStock);
     } catch (err) {
       console.error('[StockOverview] loadStock error:', err);
@@ -80,6 +84,18 @@ export function StockOverviewScreen() {
     return (item.openingStock - item.currentStock) / item.openingStock;
   };
 
+  const getProductIcon = (item: StockSchema) => {
+    return productIcons[item.productId] || '📦';
+  };
+
+  const formatKHR = (amount: number) => {
+    return '៛ ' + Math.round(amount).toLocaleString();
+  };
+
+  const formatUSD = (amount: number) => {
+    return '$ ' + (amount / KHR_RATE).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const navigateToSale = (item: StockSchema) => {
     (navigation as any).navigate('Routes', { screen: 'RoutePlan' });
   };
@@ -89,7 +105,7 @@ export function StockOverviewScreen() {
       <LinearGradient colors={[colors.primaryDark, colors.primary]} style={styles.header}>
         <Text style={styles.headerTitle}>Stock Inventory</Text>
         <Text style={styles.headerSub}>
-          {totalItems} items • Rp {totalValue.toLocaleString()}
+          {totalItems} items • {formatKHR(totalValue)} | {formatUSD(totalValue)}
         </Text>
       </LinearGradient>
 
@@ -154,19 +170,25 @@ export function StockOverviewScreen() {
               const status = getStockStatus(item);
               const statusColor = status === 'in_stock' ? colors.success : status === 'low_stock' ? colors.warning : colors.error;
               const usage = getUsagePercent(item);
+              const icon = getProductIcon(item);
 
               return (
                 <GlassCard animate delay={index * 60}>
                   <View style={styles.stockCard}>
                     <View style={styles.stockTop}>
                       <View style={styles.stockLeft}>
-                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                        <View style={styles.imageBox}>
+                          <Text style={styles.productImage}>{icon}</Text>
+                        </View>
                         <View style={styles.stockInfo}>
                           <Text style={styles.productName}>{item.productName}</Text>
                           <Text style={styles.productCode}>{item.productCode}</Text>
                         </View>
                       </View>
-                      <Text style={styles.stockPrice}>Rp {item.price.toLocaleString()}</Text>
+                      <View style={styles.priceCol}>
+                        <Text style={styles.priceKHR}>{formatKHR(item.price)}</Text>
+                        <Text style={styles.priceUSD}>{formatUSD(item.price)}</Text>
+                      </View>
                     </View>
 
                     <View style={styles.stockDetail}>
@@ -195,13 +217,13 @@ export function StockOverviewScreen() {
                         status={status === 'in_stock' ? 'active' : status === 'low_stock' ? 'pending' : 'cancelled'}
                         size="sm"
                       />
-                      <AnimatedButton
+                      {/* <AnimatedButton
                         title="+ Add to Sale"
                         onPress={() => navigateToSale(item)}
                         variant="secondary"
                         size="sm"
                         disabled={item.currentStock <= 0}
-                      />
+                      /> */}
                     </View>
                   </View>
                 </GlassCard>
@@ -302,18 +324,24 @@ const styles = StyleSheet.create({
   stockTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   stockLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
     flex: 1,
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  imageBox: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productImage: {
+    fontSize: 26,
   },
   stockInfo: {
     flex: 1,
@@ -321,14 +349,25 @@ const styles = StyleSheet.create({
   productName: {
     ...typography.bodyBold,
     color: colors.textPrimary,
+    fontSize: 14,
   },
   productCode: {
     ...typography.small,
     color: colors.textMuted,
+    marginTop: 1,
   },
-  stockPrice: {
+  priceCol: {
+    alignItems: 'flex-end',
+  },
+  priceKHR: {
     ...typography.bodyBold,
     color: colors.primary,
+    fontSize: 14,
+  },
+  priceUSD: {
+    ...typography.small,
+    color: colors.textMuted,
+    marginTop: 1,
   },
   stockDetail: {
     flexDirection: 'row',

@@ -13,7 +13,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { mockApi } from '../services/mockApi';
 import { useAuth } from '../hooks/useAuth';
 import { RoutesStackParamList } from '../navigation/types';
-import type { StockSchema, ProgramSchema } from '../database/schema';
+import type { StockSchema, ProgramSchema, ProductSchema } from '../database/schema';
 
 type CreateSaleNavProp = StackNavigationProp<RoutesStackParamList, 'CreateSale'>;
 type CreateSaleRouteProp = RouteProp<RoutesStackParamList, 'CreateSale'>;
@@ -38,6 +38,8 @@ export function CreateSaleScreen() {
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [productIcons, setProductIcons] = useState<Record<string, string>>({});
+  const KHR_RATE = 4100;
 
   useEffect(() => {
     if (user && selectedBU && selectedAWS) loadStock();
@@ -45,10 +47,32 @@ export function CreateSaleScreen() {
 
   const loadStock = async () => {
     try {
-      const data = await mockApi.stock.getByUser(user!.id, selectedBU!.id, selectedAWS!.id);
+      const [data, catalog] = await Promise.all([
+        mockApi.stock.getByUser(user!.id, selectedBU!.id, selectedAWS!.id),
+        mockApi.stock.getProductCatalog(),
+      ]);
+      const iconMap: Record<string, string> = {};
+      for (const p of catalog) {
+        iconMap[p.id] = p.productIcon;
+      }
+      setProductIcons(iconMap);
       setStock(data);
     } catch (err) {}
   };
+
+  const getIcon = (productId: string) => productIcons[productId] || '📦';
+
+  const formatKHR = (amount: number) => '៛ ' + Math.round(amount).toLocaleString();
+
+  const formatUSD = (amount: number) =>
+    '$ ' + (amount / KHR_RATE).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const formatDualPrice = (amount: number) => (
+    <View>
+      <Text style={styles.priceKHR}>{formatKHR(amount)}</Text>
+      <Text style={styles.priceUSD}>{formatUSD(amount)}</Text>
+    </View>
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -149,7 +173,8 @@ export function CreateSaleScreen() {
             <Text style={styles.bigSuccessIcon}>✓</Text>
           </View>
           <Text style={styles.successTitle}>Transaction Successful</Text>
-          <Text style={styles.successTotal}>Rp {total.toLocaleString()}</Text>
+          <Text style={styles.successTotal}>{formatKHR(total)}</Text>
+          <Text style={styles.successTotalUSD}>{formatUSD(total)}</Text>
           <Text style={styles.successSub}>{cart.reduce((s, c) => s + c.quantity, 0)} items sold</Text>
           <View style={styles.successFooter}>
             <AnimatedButton title="→ Proceed to Check-Out" onPress={handleCheckOut} fullWidth size="lg" />
@@ -185,6 +210,7 @@ export function CreateSaleScreen() {
         <View style={styles.productsGrid}>
           {stock.map((item) => {
             const inCart = cart.find((c) => c.productId === item.productId);
+            const icon = getIcon(item.productId);
             return (
               <TouchableOpacity
                 key={item.id}
@@ -192,8 +218,11 @@ export function CreateSaleScreen() {
                 activeOpacity={0.85}
                 style={styles.productCard}
               >
+                <View style={styles.productImageBox}>
+                  <Text style={styles.productImageText}>{icon}</Text>
+                </View>
                 <Text style={styles.productNameSmall}>{item.productName}</Text>
-                <Text style={styles.productPrice}>Rp {item.price.toLocaleString()}</Text>
+                {formatDualPrice(item.price)}
                 <View style={styles.productMeta}>
                   <Text style={styles.productStock}>
                     Stock: {item.currentStock} {item.unit}
@@ -213,11 +242,16 @@ export function CreateSaleScreen() {
         {cart.length > 0 && (
           <GlassCard style={styles.cartCard}>
             <Text style={styles.sectionTitle}>Cart</Text>
-            {cart.map((item) => (
+            {cart.map((item) => {
+              const icon = getIcon(item.productId);
+              return (
               <View key={item.productId} style={styles.cartItem}>
+                <View style={styles.cartImageBox}>
+                  <Text style={styles.cartImageText}>{icon}</Text>
+                </View>
                 <View style={styles.cartInfo}>
                   <Text style={styles.cartName}>{item.productName}</Text>
-                  <Text style={styles.cartPrice}>Rp {item.unitPrice.toLocaleString()}</Text>
+                  {formatDualPrice(item.unitPrice)}
                 </View>
                 <View style={styles.qtyControl}>
                   <TouchableOpacity
@@ -234,9 +268,13 @@ export function CreateSaleScreen() {
                     <Text style={styles.qtyBtnText}>+</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.cartTotal}>Rp {item.totalPrice.toLocaleString()}</Text>
+                <View style={styles.cartTotalCol}>
+                  <Text style={styles.cartTotalKHR}>{formatKHR(item.totalPrice)}</Text>
+                  <Text style={styles.cartTotalUSD}>{formatUSD(item.totalPrice)}</Text>
+                </View>
               </View>
-            ))}
+            );
+            })}
 
             <View style={styles.divider} />
 
@@ -244,19 +282,23 @@ export function CreateSaleScreen() {
             {programs.length > 0 && (
               <View style={styles.discountSection}>
                 <Text style={styles.discountTitle}>Programs Applied</Text>
-                {programs.map((p) => (
+                {programs.map((p) => {
+                  const discAmount = Math.min(
+                    p.discountType === 'percentage'
+                      ? subtotal * (p.discountValue / 100)
+                      : p.discountValue,
+                    p.maxDiscount
+                  );
+                  return (
                   <View key={p.id} style={styles.discountRow}>
                     <Text style={styles.discountName}>{p.name}</Text>
-                    <Text style={styles.discountValue}>
-                      -Rp {Math.min(
-                        p.discountType === 'percentage'
-                          ? subtotal * (p.discountValue / 100)
-                          : p.discountValue,
-                        p.maxDiscount
-                      ).toLocaleString()}
-                    </Text>
+                    <View style={styles.discountValueCol}>
+                      <Text style={styles.discountValueKHR}>-{formatKHR(discAmount)}</Text>
+                      <Text style={styles.discountValueUSD}>-{formatUSD(discAmount)}</Text>
+                    </View>
                   </View>
-                ))}
+                  );
+                })}
               </View>
             )}
 
@@ -294,19 +336,26 @@ export function CreateSaleScreen() {
             <View style={styles.totalSection}>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Subtotal</Text>
-                <Text style={styles.totalValue}>Rp {subtotal.toLocaleString()}</Text>
+                <View style={styles.totalValueCol}>
+                  <Text style={styles.totalKHR}>{formatKHR(subtotal)}</Text>
+                  <Text style={styles.totalUSD}>{formatUSD(subtotal)}</Text>
+                </View>
               </View>
               {discount > 0 && (
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>Discount</Text>
-                  <Text style={[styles.totalValue, styles.discountText]}>
-                    -Rp {discount.toLocaleString()}
-                  </Text>
+                  <View style={styles.totalValueCol}>
+                    <Text style={styles.discountKHR}>-{formatKHR(discount)}</Text>
+                    <Text style={styles.discountUSD}>-{formatUSD(discount)}</Text>
+                  </View>
                 </View>
               )}
-              <View style={styles.totalRow}>
+              <View style={[styles.totalRow, { marginTop: spacing.xs }]}>
                 <Text style={styles.grandTotalLabel}>Total</Text>
-                <Text style={styles.grandTotalValue}>Rp {total.toLocaleString()}</Text>
+                <View style={styles.totalValueCol}>
+                  <Text style={styles.grandTotalKHR}>{formatKHR(total)}</Text>
+                  <Text style={styles.grandTotalUSD}>{formatUSD(total)}</Text>
+                </View>
               </View>
             </View>
           </GlassCard>
@@ -315,7 +364,7 @@ export function CreateSaleScreen() {
 
       <View style={styles.footer}>
         <AnimatedButton
-          title={creating ? 'Creating Sale...' : `Create Sale • Rp ${total.toLocaleString()}`}
+          title={creating ? 'Creating Sale...' : `Create Sale • ${formatKHR(total)} | ${formatUSD(total)}`}
           onPress={handleCreateSale}
           loading={creating}
           disabled={cart.length === 0 || creating}
@@ -389,10 +438,28 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
-  productPrice: {
+  productImageBox: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    alignSelf: 'center',
+  },
+  productImageText: {
+    fontSize: 26,
+  },
+  priceKHR: {
     ...typography.bodyBold,
     color: colors.primary,
-    marginBottom: spacing.xs,
+    fontSize: 13,
+  },
+  priceUSD: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontSize: 11,
   },
   productMeta: {
     flexDirection: 'row',
@@ -434,9 +501,34 @@ const styles = StyleSheet.create({
     ...typography.captionBold,
     color: colors.textPrimary,
   },
+  cartImageBox: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surfaceLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartImageText: {
+    fontSize: 20,
+  },
   cartPrice: {
     ...typography.small,
     color: colors.textMuted,
+  },
+  cartTotalCol: {
+    alignItems: 'flex-end',
+    minWidth: 80,
+  },
+  cartTotalKHR: {
+    ...typography.captionBold,
+    color: colors.textPrimary,
+    fontSize: 12,
+  },
+  cartTotalUSD: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontSize: 10,
   },
   qtyControl: {
     flexDirection: 'row',
@@ -464,12 +556,6 @@ const styles = StyleSheet.create({
     minWidth: 20,
     textAlign: 'center',
   },
-  cartTotal: {
-    ...typography.captionBold,
-    color: colors.textPrimary,
-    minWidth: 80,
-    textAlign: 'right',
-  },
   divider: {
     height: 1,
     backgroundColor: colors.border,
@@ -492,10 +578,18 @@ const styles = StyleSheet.create({
     ...typography.small,
     color: colors.textSecondary,
   },
-  discountValue: {
+  discountValueCol: {
+    alignItems: 'flex-end',
+  },
+  discountValueKHR: {
     ...typography.small,
     color: colors.error,
     fontWeight: '600',
+  },
+  discountValueUSD: {
+    ...typography.small,
+    color: colors.error,
+    fontSize: 10,
   },
   noProgramsSection: {
     flexDirection: 'row',
@@ -556,20 +650,40 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.textMuted,
   },
-  totalValue: {
+  totalValueCol: {
+    alignItems: 'flex-end',
+  },
+  totalKHR: {
     ...typography.captionBold,
     color: colors.textPrimary,
   },
-  discountText: {
+  totalUSD: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontSize: 10,
+  },
+  discountKHR: {
+    ...typography.captionBold,
     color: colors.error,
+  },
+  discountUSD: {
+    ...typography.small,
+    color: colors.error,
+    fontSize: 10,
   },
   grandTotalLabel: {
     ...typography.bodyBold,
     color: colors.textPrimary,
   },
-  grandTotalValue: {
+  grandTotalKHR: {
     ...typography.h4,
     color: colors.primary,
+    fontSize: 18,
+  },
+  grandTotalUSD: {
+    ...typography.small,
+    color: colors.textMuted,
+    fontSize: 11,
   },
   footer: {
     padding: spacing.lg,
@@ -607,6 +721,11 @@ const styles = StyleSheet.create({
   successTotal: {
     ...typography.h1,
     color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  successTotalUSD: {
+    ...typography.bodyBold,
+    color: colors.textMuted,
     marginBottom: spacing.xs,
   },
   successSub: {
