@@ -97,7 +97,7 @@ export function StockOverviewScreen() {
   };
 
   const navigateToSale = (item: StockSchema) => {
-    (navigation as any).navigate('Routes', { screen: 'RoutePlan' });
+    (navigation as any).navigate('Sales', { screen: 'RoutePlan' });
   };
 
   return (

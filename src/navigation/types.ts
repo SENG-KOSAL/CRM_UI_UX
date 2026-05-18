@@ -15,7 +15,6 @@ export type AuthStackParamList = {
 
 export type MainTabParamList = {
   Dashboard: undefined;
-  Routes: undefined;
   Sales: undefined;
   Stock: undefined;
   More: undefined;
@@ -32,11 +31,6 @@ export type RoutesStackParamList = {
   LoadPrograms: { outlet: OutletSchema; route: RouteSchema };
   CreateSale: { outlet: OutletSchema; route: RouteSchema; programs: ProgramSchema[] };
   CheckOut: { outlet: OutletSchema; route: RouteSchema };
-};
-
-export type SalesStackParamList = {
-  SalesHistory: undefined;
-  SaleDetail: { saleId: string };
 };
 
 export type StockStackParamList = {

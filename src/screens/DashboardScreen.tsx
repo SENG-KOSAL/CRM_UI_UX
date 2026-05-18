@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { SkeletonLoader } from '../components/SkeletonLoader';
 import { mockApi } from '../services/mockApi';
@@ -80,6 +80,7 @@ function MenuButton({ icon, label, color, onPress }: {
 }
 
 export function DashboardScreen() {
+  const navigation = useNavigation();
   const { user, selectedBU, selectedAWS } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -267,7 +268,7 @@ export function DashboardScreen() {
           <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
         </View>
         <View style={styles.menuGrid}>
-          <MenuButton icon="cart-plus" label="Sale" color={colors.primary} onPress={() => {}} />
+          <MenuButton icon="cart-plus" label="Sale" color={colors.primary} onPress={() => (navigation as any).navigate('Sales', { screen: 'RoutePlan' })} />
           <MenuButton icon="file-chart" label="Summary" color={colors.secondary} onPress={() => {}} />
           <MenuButton icon="note-text" label="Memo" color={colors.accent} onPress={() => {}} />
           <MenuButton icon="package-variant-closed" label="Stock" color="#9C27B0" onPress={() => {}} />

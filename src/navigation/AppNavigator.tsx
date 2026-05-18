@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 
-import { AuthStackParamList, MainTabParamList, RoutesStackParamList, StockStackParamList, SalesStackParamList, MoreStackParamList } from './types';
+import { AuthStackParamList, MainTabParamList, RoutesStackParamList, StockStackParamList, MoreStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 
 // Screens
@@ -28,13 +28,11 @@ const AuthStack = createStackNavigator<AuthStackParamList>();
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const RoutesStack = createStackNavigator<RoutesStackParamList>();
 const StockStack = createStackNavigator<StockStackParamList>();
-const SalesStack = createStackNavigator<SalesStackParamList>();
 const MoreStack = createStackNavigator<MoreStackParamList>();
 
 const tabIcons: Record<string, string> = {
   Dashboard: '📊',
-  Routes: '📍',
-  Sales: '💰',
+  Sales: '📍',
   Stock: '📦',
   More: '⚙️',
 };
@@ -168,10 +166,6 @@ function RoutesScreenWrapper() {
   return <RoutesStackNav />;
 }
 
-function SalesScreenWrapper() {
-  return <View style={{ flex: 1, backgroundColor: colors.background }} />;
-}
-
 function StockScreenWrapper() {
   return (
     <StockStack.Navigator screenOptions={{ headerShown: false }}>
@@ -196,8 +190,7 @@ function MainTabs() {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Dashboard" component={DashboardScreenWrapper} />
-      <Tab.Screen name="Routes" component={RoutesScreenWrapper} />
-      <Tab.Screen name="Sales" component={SalesScreenWrapper} />
+      <Tab.Screen name="Sales" component={RoutesScreenWrapper} />
       <Tab.Screen name="Stock" component={StockScreenWrapper} />
       <Tab.Screen name="More" component={MoreScreenWrapper} />
     </Tab.Navigator>
